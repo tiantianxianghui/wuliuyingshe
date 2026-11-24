@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>物流映射配置</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { height:100%; }
+  body { font-family:"PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif; font-size:13px; color:#333; background:#f5f6f8; }
+  button { font-family:inherit; cursor:pointer; }
+  .page { background:#fff; min-height:100vh; padding:14px 16px 24px; }
+
+  /* ---------- 查询区 ---------- */
+  .query-bar { display:flex; flex-wrap:wrap; align-items:center; gap:12px 22px; padding-bottom:14px; border-bottom:1px solid #eee; }
+  .q-field { display:flex; align-items:center; }
+  .q-field > label { margin-right:8px; color:#333; white-space:nowrap; }
+  .input { width:180px; height:32px; border:1px solid #dcdfe6; border-radius:2px; padding:0 10px; font-size:13px; color:#333; outline:none; background:#fff; }
+  .input::placeholder { color:#bbb; }
+  .input:focus { border-color:#ff6a00; }
+
+  .btn { height:32px; padding:0 16px; border-radius:2px; font-size:13px; border:1px solid transparent; }
+  .btn-primary { background:#ff6a00; border-color:#ff6a00; color:#fff; }
+  .btn-primary:hover { background:#ff7d1f; border-color:#ff7d1f; }
+  .btn-plain { background:#fff; border-color:#dcdfe6; color:#333; }
+  .btn-plain:hover { border-color:#ff6a00; color:#ff6a00; }
+
+  /* ---------- 自定义下拉 ---------- */
+  .ui-select { position:relative; width:180px; height:32px; border:1px solid #dcdfe6; border-radius:2px; background:#fff; cursor:pointer; }
+  .ui-select .sel-text { line-height:30px; padding:0 26px 0 10px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+  .ui-select .sel-text.placeholder { color:#bbb; }
+  .ui-select .sel-arrow { position:absolute; right:9px; top:13px; width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-top:6px solid #b0b3ba; transition:transform .15s; pointer-events:none; }
+  .ui-select.open .sel-arrow { transform:rotate(180deg); }
+  .ui-select.open { border-color:#ff6a00; }
+  .ui-select.disabled { background:#f5f5f5; color:#aaa; cursor:not-allowed; border-color:#e4e4e4; }
+  .ui-select.disabled .sel-text { color:#bbb; }
+  .sel-options { display:none; position:absolute; left:0; top:33px; min-width:100%; max-height:220px; overflow:auto; background:#fff; border:1px solid #e4e7ed; border-radius:2px; box-shadow:0 2px 8px rgba(0,0,0,.08); z-index:60; padding:2px 0; }
+  .ui-select.open .sel-options { display:block; }
+  .ui-option { padding:0 12px; height:30px; line-height:30px; white-space:nowrap; cursor:pointer; }
+  .ui-option:hover { background:#fff4ec; color:#ff6a00; }
+  .ui-option.active { color:#ff6a00; font-weight:600; }
+  .sel-search { display:block; width:calc(100% - 12px); margin:6px; height:28px; border:1px solid #dcdfe6; border-radius:2px; padding:0 8px; outline:none; font-size:12px; }
+  .sel-search:focus { border-color:#ff6a00; }
+  .sel-empty { padding:8px 12px; color:#aaa; text-align:center; }
+
+  /* ---------- 工具栏 ---------- */
+  .toolbar { padding:12px 0 10px; display:flex; gap:10px; align-items:center; }
+  .btn-add { height:32px; padding:0 14px; background:#ff6a00; color:#fff; border:none; border-radius:2px; font-size:13px; display:inline-flex; align-items:center; gap:6px; }
+  .btn-add:hover { background:#ff7d1f; }
+  .btn-add .plus { font-size:15px; line-height:1; }
+
+  /* ---------- 表格 ---------- */
+  .table-wrap { border:1px solid #eee; border-radius:2px; overflow:auto; }
+  table.grid { width:100%; border-collapse:collapse; min-width:1180px; }
+  table.grid th { background:#f7f8fa; color:#333; font-weight:700; text-align:left; padding:10px 12px; border-bottom:1px solid #e8e8e8; white-space:nowrap; }
+  table.grid td { padding:10px 12px; border-bottom:1px solid #f0f0f0; vertical-align:top; word-break:break-all; }
+  table.grid tr:hover td { background:#fafafa; }
+  table.grid .empty { text-align:center; color:#999; padding:36px 0; }
+  .op-link { color:#2f88ff; cursor:pointer; margin-right:14px; white-space:nowrap; }
+  .op-link:hover { text-decoration:underline; }
+  .op-link:last-child { margin-right:0; }
+
+  /* ---------- 分页 ---------- */
+  .pager { display:flex; align-items:center; justify-content:flex-end; gap:6px; padding:14px 4px 0; color:#333; flex-wrap:wrap; }
+  .pager .total { margin-right:6px; }
+  .pg-btn { min-width:28px; height:28px; border:1px solid #dcdfe6; background:#fff; border-radius:2px; font-size:12px; color:#333; padding:0 6px; }
+  .pg-btn:hover { border-color:#ff6a00; color:#ff6a00; }
+  .pg-btn.active { border-color:#ff6a00; color:#ff6a00; font-weight:700; }
+  .pg-btn:disabled { color:#ccc; border-color:#eee; cursor:not-allowed; }
+  .pager .ui-select { width:88px; }
+  .pager .jump-input { width:52px; height:28px; border:1px solid #dcdfe6; border-radius:2px; text-align:center; outline:none; }
+
+  /* ---------- 弹窗 ---------- */
+  .mask { position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; align-items:flex-start; justify-content:center; z-index:100; }
+  .mask.show { display:flex; }
+  .modal { background:#fff; border-radius:4px; margin-top:8vh; width:720px; max-width:94vw; max-height:82vh; display:flex; flex-direction:column; box-shadow:0 6px 24px rgba(0,0,0,.15); }
+  .modal.small { width:420px; }
+  .modal-head { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid #f0f0f0; }
+  .modal-head .title { font-size:15px; font-weight:700; color:#333; }
+  .modal-head .close { border:none; background:none; font-size:18px; color:#999; line-height:1; cursor:pointer; }
+  .modal-head .close:hover { color:#333; }
+  .modal-body { padding:20px 24px; overflow:auto; }
+  .modal-foot { padding:12px 20px; border-top:1px solid #f0f0f0; display:flex; justify-content:flex-end; gap:10px; }
+
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px 28px; }
+  .form-item { display:flex; flex-direction:column; }
+  .form-item > label { margin-bottom:6px; color:#333; }
+  .req::before { content:"*"; color:#f5222d; margin-right:3px; }
+  .form-item .input, .form-item .ui-select { width:100%; }
+  .field-error { color:#f5222d; font-size:12px; margin-top:5px; min-height:14px; }
+  .form-item.invalid .input, .form-item.invalid .ui-select { border-color:#f5222d; }
+
+  .confirm-text { font-size:14px; color:#333; line-height:1.6; padding:6px 0 2px; }
+  .confirm-text .warn-icon { display:inline-flex; width:20px; height:20px; border-radius:50%; background:#ff6a00; color:#fff; align-items:center; justify-content:center; margin-right:8px; font-weight:700; font-size:13px; vertical-align:-4px; }
+
+  table.log-grid { width:100%; border-collapse:collapse; }
+  table.log-grid th { background:#f7f8fa; text-align:left; padding:8px 12px; border:1px solid #eee; font-weight:700; white-space:nowrap; }
+  table.log-grid td { padding:8px 12px; border:1px solid #eee; vertical-align:top; }
+  table.log-grid td.time, table.log-grid td.user { white-space:nowrap; }
+
+  /* ---------- Toast ---------- */
+  #toast { position:fixed; top:18px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.78); color:#fff; padding:8px 18px; border-radius:3px; font-size:13px; z-index:200; display:none; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- 查询区 -->
+  <div class="query-bar">
+    <div class="q-field">
+      <label>物流服务商</label>
+      <input class="input" id="q_provider" placeholder="请输入">
+    </div>
+    <div class="q-field">
+      <label>承运商</label>
+      <input class="input" id="q_carrier" placeholder="请输入">
+    </div>
+    <div class="q-field">
+      <label>系统物流商</label>
+      <input class="input" id="q_sysProvider" placeholder="请输入">
+    </div>
+    <div class="q-field">
+      <label>状态</label>
+      <div class="ui-select" id="q_status" data-search="0">
+        <div class="sel-text placeholder">请选择</div>
+        <span class="sel-arrow"></span>
+        <div class="sel-options"></div>
+      </div>
+    </div>
+    <div class="q-field" style="gap:10px;">
+      <button class="btn btn-primary" id="btn_query">查 询</button>
+      <button class="btn btn-plain" id="btn_reset">重 置</button>
+    </div>
+  </div>
+
+  <!-- 工具栏 -->
+  <div class="toolbar">
+    <button class="btn-add" id="btn_add"><span class="plus">+</span> 添 加</button>
+  </div>
+
+  <!-- 列表 -->
+  <div class="table-wrap">
+    <table class="grid">
+      <thead>
+        <tr>
+          <th>平台</th>
+          <th>销售模式</th>
+          <th>店铺账号</th>
+          <th>物流服务商</th>
+          <th>承运商</th>
+          <th>承运商code</th>
+          <th>系统物流商</th>
+          <th>系统物流产品</th>
+          <th>状态</th>
+          <th style="min-width:170px;">操作</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- 分页 -->
+  <div class="pager">
+    <span class="total" id="pg_total">共0条数据</span>
+    <span id="pg_pages" style="display:flex;gap:6px;"></span>
+    <div class="ui-select" id="pg_size" data-search="0">
+      <div class="sel-text">10条/页</div>
+      <span class="sel-arrow"></span>
+      <div class="sel-options"></div>
+    </div>
+    <span>跳至</span>
+    <input class="jump-input" id="pg_jump">
+  </div>
+</div>
+
+<!-- 添加/编辑弹窗 -->
+<div class="mask" id="form_mask">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="title" id="form_title">添加物流映射配置</span>
+      <button class="close" data-close="form_mask">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-item" id="fi_platform">
+          <label class="req">平台</label>
+          <div class="ui-select" id="m_platform" data-search="0">
+            <div class="sel-text placeholder">请选择</div>
+            <span class="sel-arrow"></span>
+            <div class="sel-options"></div>
+          </div>
+          <div class="field-error"></div>
+        </div>
+        <div class="form-item" id="fi_mode">
+          <label class="req">销售模式</label>
+          <div class="ui-select" id="m_mode" data-search="0">
+            <div class="sel-text placeholder">请选择</div>
+            <span class="sel-arrow"></span>
+            <div class="sel-options"></div>
+          </div>
+          <div class="field-error"></div>
+        </div>
+        <div class="form-item" id="fi_shop">
+          <label>店铺账号</label>
+          <div class="ui-select" id="m_shop" data-search="1">
+            <div class="sel-text placeholder">请选择</div>
+            <span class="sel-arrow"></span>
+            <div class="sel-options"></div>
+          </div>
+          <div class="field-error"></div>
+        </div>
+        <div class="form-item" id="fi_provider">
+          <label class="req">物流服务商</label>
+          <input class="input" id="m_provider" placeholder="请输入">
+          <div class="field-error"></div>
+        </div>
+        <div class="form-item">
+          <label>承运商</label>
+          <input class="input" id="m_carrier" placeholder="请输入">
+          <div class="field-error"></div>
+        </div>
+        <div class="form-item">
+          <label>承运商code</label>
+          <input class="input" id="m_carrierCode" placeholder="请输入">
+          <div class="field-error"></div>
+        </div>
+        <div class="form-item" id="fi_sysProvider">
+          <label class="req">系统物流商</label>
+          <div class="ui-select" id="m_sysProvider" data-search="0">
+            <div class="sel-text placeholder">请选择</div>
+            <span class="sel-arrow"></span>
+            <div class="sel-options"></div>
+          </div>
+          <div class="field-error"></div>
+        </div>
+        <div class="form-item" id="fi_sysProduct">
+          <label>系统物流产品</label>
+          <div class="ui-select" id="m_sysProduct" data-search="0">
+            <div class="sel-text placeholder">请选择</div>
+            <span class="sel-arrow"></span>
+            <div class="sel-options"></div>
+          </div>
+          <div class="field-error"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-plain" data-close="form_mask">取 消</button>
+      <button class="btn btn-primary" id="btn_save">确 定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 删除确认弹窗 -->
+<div class="mask" id="del_mask">
+  <div class="modal small">
+    <div class="modal-head">
+      <span class="title">删除确认</span>
+      <button class="close" data-close="del_mask">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="confirm-text"><span class="warn-icon">!</span>确认删除该物流映射配置？</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-plain" data-close="del_mask">取 消</button>
+      <button class="btn btn-primary" id="btn_del_ok">确 定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 日志弹窗 -->
+<div class="mask" id="log_mask">
+  <div class="modal" style="width:760px;">
+    <div class="modal-head">
+      <span class="title">操作日志</span>
+      <button class="close" data-close="log_mask">×</button>
+    </div>
+    <div class="modal-body">
+      <table class="log-grid">
+        <thead>
+          <tr><th style="width:170px;">操作时间</th><th style="width:110px;">操作人</th><th>操作内容</th></tr>
+        </thead>
+        <tbody id="log_tbody"></tbody>
+      </table>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-plain" data-close="log_mask">关 闭</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ================= 基础数据（模拟接口） ================= */
+const PLATFORMS = ['AliExpress'];                   // 平台管理-开启状态的平台
+const SALES_MODES = ['PSFBM', 'SCSF'];              // 主数据-开启状态的销售模式（简称）
+const SHOPS = {                                     // 主数据-正常/受限状态店铺（按平台+销售模式）
+  'AliExpress|PSFBM': ['homebiebuy@163.com', 'cnmoss001@163.com', 'oversea88@163.com', 'ali2019@163.com'],
+  'AliExpress|SCSF': ['selfship01@163.com', 'ruself02@163.com', 'shop9527@163.com']
+};
+const SYS_LOGISTICS = {                             // 物流系统-生效状态物流商及物流产品
+  '燕文物流': ['Express', 'Economy', 'Standard'],
+  '云途物流': ['Express', 'Economy', 'Standard'],
+  '递四方': ['Express', 'Economy', 'Standard'],
+  'Canada Post': ['Xpresspost', 'Ground', 'Priority'],
+  'UPS': ['Ground', 'Saver', 'Expedited']
+};
+const CUR_USER = '张三';
+
+let nextId = 100;
+function seedRow(platform, mode, shop, provider, carrier, carrierCode, sysP, sysProd, status) {
+  return { id: nextId++, platform, salesMode: mode, shop, provider, carrier, carrierCode,
+           sysProvider: sysP, sysProduct: sysProd, status,
+           logs: [{ time: '2026-11-18 10:23:45', user: CUR_USER, content: '添加配置' }] };
+}
+let allRows = [
+  seedRow('AliExpress', 'PSFBM', 'homebiebuy@163.com', 'UPS', 'UPS', '100043', 'UPS', 'Ground', '启用'),
+  seedRow('AliExpress', 'PSFBM', 'cnmoss001@163.com', 'Canada Post', 'Canada Post', '30412', 'Canada Post', 'Xpresspost', '启用'),
+  seedRow('AliExpress', 'SCSF', 'selfship01@163.com', '燕文', 'UPS', '100021', '递四方', 'Express', '启用'),
+  seedRow('AliExpress', 'PSFBM', 'oversea88@163.com', '云途', 'UPS', '100022', '云途物流', 'Economy', '停用'),
+  seedRow('AliExpress', 'SCSF', 'ruself02@163.com', '递四方', '', '', '递四方', 'Standard', '启用'),
+  seedRow('AliExpress', 'PSFBM', 'ali2019@163.com', '燕文', 'UPS', '100045', '燕文物流', 'Express', '启用')
+];
+
+/* ================= 通用工具 ================= */
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+function esc(t) { return String(t ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function now() {
+  const d = new Date(), p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.style.display = 'block';
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.style.display = 'none', 2000);
+}
+
+/* ================= 自定义下拉组件 ================= */
+function selVal(sel) { return sel.dataset.value || ''; }
+function selTextEl(sel) { return sel.querySelector('.sel-text'); }
+function setSelValue(sel, val, silent) {
+  sel.dataset.value = val;
+  const txt = selTextEl(sel);
+  txt.textContent = val || (sel.dataset.ph || '请选择');
+  txt.classList.toggle('placeholder', !val);
+  if (!silent && sel._onChange) sel._onChange(val);
+}
+function setOptions(sel, opts) {
+  sel._opts = opts;
+  renderOptions(sel, '');
+}
+function renderOptions(sel, kw) {
+  const list = sel.querySelector('.sel-options');
+  const search = sel.querySelector('.sel-search');
+  let html = '';
+  if (search) { search.value = ''; list.prepend(search); }
+  const arr = (sel._opts || []).filter(o => !kw || o.toLowerCase().includes(kw.toLowerCase()));
+  if (!arr.length) html = '<div class="sel-empty">无匹配数据</div>';
+  else html = arr.map(o => `<div class="ui-option${o === selVal(sel) ? ' active' : ''}" data-val="${esc(o)}">${esc(o)}</div>`).join('');
+  list.innerHTML = (search ? '<input class="sel-search" placeholder="搜索">' : '') + html;
+  if (search) {
+    search.addEventListener('click', e => e.stopPropagation());
+    search.addEventListener('input', () => {
+      const keep = search.value;
+      renderOptions(sel, keep);
+      const s2 = sel.querySelector('.sel-search'); s2.value = keep;
+      sel.querySelector('.sel-options').prepend(s2);
+      s2.focus();
+    });
+  }
+}
+function isDisabled(sel) { return sel.classList.contains('disabled'); }
+function setDisabled(sel, dis) {
+  sel.classList.toggle('disabled', dis);
+  if (dis) setSelValue(sel, '', true);
+}
+document.addEventListener('click', () => $$('.ui-select.open').forEach(s => s.classList.remove('open')));
+document.addEventListener('click', e => {
+  const opt = e.target.closest('.ui-option');
+  if (!opt) return;
+  const sel = opt.closest('.ui-select');
+  if (isDisabled(sel)) return;
+  setSelValue(sel, opt.dataset.val);
+  sel.classList.remove('open');
+});
+$$('.ui-select').forEach(sel => {
+  sel.dataset.ph = selTextEl(sel).textContent;
+  sel.addEventListener('click', e => {
+    if (isDisabled(sel)) return;
+    const wasOpen = sel.classList.contains('open');
+    $$('.ui-select.open').forEach(s => s.classList.remove('open'));
+    if (!wasOpen) { renderOptions(sel, ''); sel.classList.add('open'); if (sel.dataset.search === '1') { const s = sel.querySelector('.sel-search'); if (s) s.focus(); } }
+  });
+});
+
+/* ================= 列表渲染 + 查询 ================= */
+let filters = { provider:'', carrier:'', sysProvider:'', status:'' };
+let page = 1, pageSize = 10;
+
+function getFiltered() {
+  return allRows.filter(r =>
+    (!filters.provider || r.provider.toLowerCase().includes(filters.provider.toLowerCase())) &&
+    (!filters.carrier || r.carrier.toLowerCase().includes(filters.carrier.toLowerCase())) &&
+    (!filters.sysProvider || r.sysProvider.toLowerCase().includes(filters.sysProvider.toLowerCase())) &&
+    (!filters.status || r.status === filters.status)
+  );
+}
+function renderTable() {
+  const rows = getFiltered();
+  const pages = Math.max(1, Math.ceil(rows.length / pageSize));
+  if (page > pages) page = pages;
+  const view = rows.slice((page-1)*pageSize, page*pageSize);
+  const tb = $('#tbody');
+  if (!view.length) {
+    tb.innerHTML = '<tr><td class="empty" colspan="10">暂无数据</td></tr>';
+  } else {
+    tb.innerHTML = view.map(r => `
+      <tr data-id="${r.id}">
+        <td>${esc(r.platform)}</td>
+        <td>${esc(r.salesMode)}</td>
+        <td>${esc(r.shop) || '—'}</td>
+        <td>${esc(r.provider)}</td>
+        <td>${esc(r.carrier) || '—'}</td>
+        <td>${esc(r.carrierCode) || '—'}</td>
+        <td>${esc(r.sysProvider)}</td>
+        <td>${esc(r.sysProduct) || '—'}</td>
+        <td>${r.status}</td>
+        <td>
+          <span class="op-link" data-act="edit">编辑</span>
+          <span class="op-link" data-act="toggle">${r.status==='启用' ? '停用' : '启用'}</span>
+          <span class="op-link" data-act="del">删除</span>
+          <span class="op-link" data-act="log">日志</span>
+        </td>
+      </tr>`).join('');
+  }
+  $('#pg_total').textContent = `共${rows.length}条数据`;
+  // 页码
+  let btns = `<button class="pg-btn" data-pg="prev" ${page===1?'disabled':''}>&lt;</button>`;
+  for (let i = 1; i <= pages; i++) btns += `<button class="pg-btn${i===page?' active':''}" data-pg="${i}">${i}</button>`;
+  btns += `<button class="pg-btn" data-pg="next" ${page===pages?'disabled':''}>&gt;</button>`;
+  $('#pg_pages').innerHTML = btns;
+}
+$('#btn_query').addEventListener('click', () => {
+  filters = {
+    provider: $('#q_provider').value.trim(),
+    carrier: $('#q_carrier').value.trim(),
+    sysProvider: $('#q_sysProvider').value.trim(),
+    status: selVal($('#q_status'))
+  };
+  page = 1; renderTable();
+});
+$('#btn_reset').addEventListener('click', () => {
+  ['q_provider','q_carrier','q_sysProvider'].forEach(id => $('#' + id).value = '');
+  setSelValue($('#q_status'), '', true);
+  filters = { provider:'', carrier:'', sysProvider:'', status:'' };
+  page = 1; renderTable();
+});
+$('#pg_pages').addEventListener('click', e => {
+  const b = e.target.closest('.pg-btn'); if (!b || b.disabled) return;
+  const v = b.dataset.pg;
+  const pages = Math.max(1, Math.ceil(getFiltered().length / pageSize));
+  if (v === 'prev') page = Math.max(1, page - 1);
+  else if (v === 'next') page = Math.min(pages, page + 1);
+  else page = +v;
+  renderTable();
+});
+$('#pg_jump').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const pages = Math.max(1, Math.ceil(getFiltered().length / pageSize));
+  const n = parseInt(e.target.value, 10);
+  if (n >= 1 && n <= pages) { page = n; renderTable(); }
+  e.target.value = '';
+});
+setOptions($('#q_status'), ['停用','启用']);
+setOptions($('#pg_size'), ['10条/页','20条/页','50条/页']);
+$('#pg_size')._onChange = v => { pageSize = parseInt(v, 10); page = 1; renderTable(); };
+
+/* ================= 弹窗控制 ================= */
+function openMask(id) { $('#' + id).classList.add('show'); }
+function closeMask(id) { $('#' + id).classList.remove('show'); }
+$$('[data-close]').forEach(b => b.addEventListener('click', () => closeMask(b.dataset.close)));
+
+/* ================= 添加 / 编辑 ================= */
+let editingId = null;
+const M = {
+  platform: $('#m_platform'), mode: $('#m_mode'), shop: $('#m_shop'),
+  provider: $('#m_provider'), carrier: $('#m_carrier'), carrierCode: $('#m_carrierCode'),
+  sysProvider: $('#m_sysProvider'), sysProduct: $('#m_sysProduct')
+};
+function clearFormErrors() { $$('#form_mask .form-item').forEach(f => { f.classList.remove('invalid'); f.querySelector('.field-error').textContent = ''; }); }
+function setError(itemId, msg) { const f = $('#' + itemId); f.classList.add('invalid'); f.querySelector('.field-error').textContent = msg; }
+
+function refreshShopOptions() {
+  const p = selVal(M.platform), m = selVal(M.mode);
+  if (p && m) {
+    setDisabled(M.shop, false);
+    setOptions(M.shop, SHOPS[`${p}|${m}`] || []);
+  } else {
+    setDisabled(M.shop, true);
+  }
+}
+function refreshProductOptions() {
+  const sp = selVal(M.sysProvider);
+  if (sp) { setDisabled(M.sysProduct, false); setOptions(M.sysProduct, SYS_LOGISTICS[sp] || []); }
+  else { setDisabled(M.sysProduct, true); }
+}
+M.platform._onChange = refreshShopOptions;
+M.mode._onChange = refreshShopOptions;
+M.sysProvider._onChange = () => { setSelValue(M.sysProduct, '', true); refreshProductOptions(); };
+
+function openForm(row) {
+  editingId = row ? row.id : null;
+  clearFormErrors();
+  $('#form_title').textContent = row ? '编辑物流映射配置' : '添加物流映射配置';
+  setOptions(M.platform, PLATFORMS);
+  setOptions(M.mode, SALES_MODES);
+  setOptions(M.sysProvider, Object.keys(SYS_LOGISTICS));
+  M.platform.classList.remove('disabled'); M.mode.classList.remove('disabled');
+  if (row) {
+    setSelValue(M.platform, row.platform, true);
+    setSelValue(M.mode, row.salesMode, true);
+    refreshShopOptions();
+    setSelValue(M.shop, row.shop, true);
+    M.provider.value = row.provider;
+    M.carrier.value = row.carrier;
+    M.carrierCode.value = row.carrierCode;
+    setSelValue(M.sysProvider, row.sysProvider, true);
+    refreshProductOptions();
+    setSelValue(M.sysProduct, row.sysProduct, true);
+    // 编辑时：平台、销售模式、店铺账号不可修改
+    M.platform.classList.add('disabled');
+    M.mode.classList.add('disabled');
+    M.shop.classList.add('disabled');
+  } else {
+    setSelValue(M.platform, '', true); setSelValue(M.mode, '', true);
+    setDisabled(M.shop, true);
+    M.provider.value = ''; M.carrier.value = ''; M.carrierCode.value = '';
+    setSelValue(M.sysProvider, '', true);
+    setSelValue(M.sysProduct, '', true);
+    M.sysProduct.classList.add('disabled');
+  }
+  openMask('form_mask');
+}
+$('#btn_add').addEventListener('click', () => openForm(null));
+
+$('#btn_save').addEventListener('click', () => {
+  clearFormErrors();
+  let ok = true;
+  if (!selVal(M.platform)) { setError('fi_platform','请选择平台'); ok = false; }
+  if (!selVal(M.mode)) { setError('fi_mode','请选择销售模式'); ok = false; }
+  if (!M.provider.value.trim()) { setError('fi_provider','请输入物流服务商'); ok = false; }
+  if (!selVal(M.sysProvider)) { setError('fi_sysProvider','请选择系统物流商'); ok = false; }
+  if (!ok) return;
+
+  const data = {
+    platform: selVal(M.platform), salesMode: selVal(M.mode), shop: selVal(M.shop),
+    provider: M.provider.value.trim(), carrier: M.carrier.value.trim(),
+    carrierCode: M.carrierCode.value.trim(),
+    sysProvider: selVal(M.sysProvider), sysProduct: selVal(M.sysProduct)
+  };
+  if (editingId == null) {
+    const row = { id: nextId++, ...data, status: '启用', logs: [{ time: now(), user: CUR_USER, content: '添加配置' }] };
+    allRows.unshift(row);
+    toast('添加成功');
+  } else {
+    const row = allRows.find(r => r.id === editingId);
+    const keys = ['provider','carrier','carrierCode','sysProvider','sysProduct'];
+    const changed = keys.some(k => (row[k] || '') !== (data[k] || ''));
+    if (changed) {
+      const fmt = o => `物流服务商：${o.provider || '—'}、承运商：${o.carrier || '—'}、承运商code：${o.carrierCode || '—'}、系统物流商：${o.sysProvider || '—'}、系统物流产品：${o.sysProduct || '—'}`;
+      row.logs.unshift({ time: now(), user: CUR_USER, content: `编辑配置：修改前：${fmt(row)}；修改后：${fmt(data)}` });
+    }
+    Object.assign(row, data);
+    toast('编辑成功');
+  }
+  closeMask('form_mask');
+  renderTable();
+});
+
+/* ================= 行操作：停用/启用、删除、日志 ================= */
+let delTargetId = null;
+$('#tbody').addEventListener('click', e => {
+  const link = e.target.closest('.op-link'); if (!link) return;
+  const id = +link.closest('tr').dataset.id;
+  const row = allRows.find(r => r.id === id);
+  const act = link.dataset.act;
+  if (act === 'edit') openForm(row);
+  else if (act === 'toggle') {
+    row.status = row.status === '启用' ? '停用' : '启用';
+    row.logs.unshift({ time: now(), user: CUR_USER, content: row.status === '启用' ? '启用配置' : '停用配置' });
+    toast(row.status === '启用' ? '已启用' : '已停用');
+    renderTable();
+  }
+  else if (act === 'del') { delTargetId = id; openMask('del_mask'); }
+  else if (act === 'log') {
+    $('#log_tbody').innerHTML = row.logs.length
+      ? row.logs.map(l => `<tr><td class="time">${esc(l.time)}</td><td class="user">${esc(l.user)}</td><td>${esc(l.content)}</td></tr>`).join('')
+      : '<tr><td colspan="3" style="text-align:center;color:#999;">暂无日志</td></tr>';
+    openMask('log_mask');
+  }
+});
+$('#btn_del_ok').addEventListener('click', () => {
+  allRows = allRows.filter(r => r.id !== delTargetId);
+  closeMask('del_mask');
+  toast('删除成功');
+  renderTable();
+});
+
+/* ================= 初始化 ================= */
+renderTable();
+</script>
+</body>
+</html>
