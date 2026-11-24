@@ -82,7 +82,9 @@
   .modal-body { padding:20px 24px; overflow:auto; }
   .modal-foot { padding:12px 20px; border-top:1px solid #f0f0f0; display:flex; justify-content:flex-end; gap:10px; }
 
-  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px 28px; }
+  .form-grid { display:grid; grid-template-columns:1fr; gap:16px; }
+  .form-group-title { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:#333; margin-top:4px; }
+  .form-group-title::before { content:""; width:3px; height:14px; background:#ff6a00; border-radius:2px; }
   .form-item { display:flex; flex-direction:column; }
   .form-item > label { margin-bottom:6px; color:#333; }
   .req::before { content:"*"; color:#f5222d; margin-right:3px; }
@@ -175,13 +177,14 @@
 
 <!-- 添加/编辑弹窗 -->
 <div class="mask" id="form_mask">
-  <div class="modal">
+  <div class="modal" style="width:520px;">
     <div class="modal-head">
       <span class="title" id="form_title">添加物流映射配置</span>
       <button class="close" data-close="form_mask">×</button>
     </div>
     <div class="modal-body">
       <div class="form-grid">
+        <div class="form-group-title">平台物流</div>
         <div class="form-item" id="fi_platform">
           <label class="req">平台</label>
           <div class="ui-select" id="m_platform" data-search="0">
@@ -224,6 +227,7 @@
           <input class="input" id="m_carrierCode" placeholder="请输入">
           <div class="field-error"></div>
         </div>
+        <div class="form-group-title">系统物流</div>
         <div class="form-item" id="fi_sysProvider">
           <label class="req">系统物流商</label>
           <div class="ui-select" id="m_sysProvider" data-search="0">
